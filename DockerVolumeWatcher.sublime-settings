@@ -1,0 +1,20 @@
+{
+    // enable this to use
+    // if you are running this in a project
+    // use
+    // "DockerVolumeWatcher.enabled": true,
+    // in your sublime project file
+    "enabled": true,
+    // test if this port is open, it only runs if it does
+    "port": 80,
+    // enable this and look prints on console
+    "debug": false,
+    "path_mapping": [
+        // example:
+        // {
+        //     "name": "container's name",
+        //     "src": "C:\\Project\\Test",
+        //     "dest": "/usr/local/src/",
+        // },
+    ],
+}
