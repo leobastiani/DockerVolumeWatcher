@@ -40,13 +40,12 @@ def getSetting(name, default=None):
     return ret
 
 def debug(*args):
-    '''funciona como print, mas só é executada se sys.flags.debug == 1'''
     if not DEBUG:
         return ;
     print('DockerVolumeWatcher: ', end='')
     print(*args)
 
-class LeoCodeIntelEventListener(sublime_plugin.EventListener):
+class DockerVolumeWatcherEventListener(sublime_plugin.EventListener):
 
     def on_post_save_async(self, view):
         global DEBUG, isPortOpen
