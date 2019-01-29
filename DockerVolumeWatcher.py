@@ -63,30 +63,29 @@ class LeoCodeIntelEventListener(sublime_plugin.EventListener):
         path_mappings = getSetting('path_mapping', {})
         debug("path_mappings:", path_mappings)
         if path_mappings:
-                filePath = view.file_name().replace('\\', '/')
-                for p in path_mappings:
-                    name = p['name']
-                    destPath = p['dest']
-                    srcPath = p['src'].replace('\\', '/')
-                    debug("name:", name)
-                    debug("destPath:", destPath)
-                    debug("srcPath:", srcPath)
-                    debug("filePath:", filePath)
-                    mustTouch = re.search('^'+srcPath, filePath)
-                    debug("mustTouch:", mustTouch)
-                    if mustTouch:
-                        portOpen = getIsPortOpen(port)
-                        debug("portOpen:", portOpen)
-                        if portOpen:
-                            # faz a troca
-                            filePath = re.sub('^'+srcPath, destPath, filePath)
-                            cmd = 'docker exec "'+name+'" touch "'+filePath+'"'
-                            print("cmd:", cmd)
-                            if not DEBUG:
-                                view.window().run_command("exec", {
-                                    'shell_cmd': cmd,
-                                    'quiet': True,
-                                })
-                                # https://github.com/SublimeText/LaTeXTools/issues/566
-                                view.window().run_command("hide_panel", {"panel": "output.exec"})
-                        break
+            filePath = view.file_name().replace('\\', '/')
+            for p in path_mappings:
+                name = p['name']
+                destPath = p['dest']
+                srcPath = p['src'].replace('\\', '/')
+                debug("name:", name)
+                debug("destPath:", destPath)
+                debug("srcPath:", srcPath)
+                debug("filePath:", filePath)
+                mustTouch = re.search('^'+srcPath, filePath)
+                debug("mustTouch:", mustTouch)
+                if mustTouch:
+                    portOpen = getIsPortOpen(port)
+                    debug("portOpen:", portOpen)
+                    if portOpen:
+                        # faz a troca
+                        filePath = re.sub('^'+srcPath, destPath, filePath)
+                        cmd = 'docker exec "'+name+'" touch "'+filePath+'"'
+                        print("cmd:", cmd)
+                        if not DEBUG:
+                            view.window().run_command("exec", {
+                                'shell_cmd': cmd,
+                                'quiet': True,
+                            })
+                            # https://github.com/SublimeText/LaTeXTools/issues/566
+                            view.window().run_command("hide_panel", {"panel": "output.exec"})
