@@ -79,7 +79,7 @@ class DockerVolumeWatcherEventListener(sublime_plugin.EventListener):
                     if portOpen:
                         # faz a troca
                         filePath = re.sub('^'+srcPath, destPath, filePath)
-                        cmd = 'docker exec "'+name+'" touch "'+filePath+'"'
+                        cmd = 'docker exec "'+name+'" chmod 777 "'+filePath+'"'
                         print("cmd:", cmd)
                         if not DEBUG:
                             view.window().run_command("exec", {
