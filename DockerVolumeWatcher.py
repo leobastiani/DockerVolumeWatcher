@@ -5,6 +5,7 @@ import sublime
 import sublime_plugin
 import glob
 import socket
+import subprocess
 
 isPortOpen = None
 def getIsPortOpen(port):
@@ -45,6 +46,18 @@ def debug(*args):
     print('DockerVolumeWatcher: ', end='')
     print(*args)
 
+# https://github.com/davidolrik/sublime-rsync-ssh/blob/master/rsync_ssh.py#L34
+def check_output(*args, **kwargs):
+    """Runs specified system command using subprocess.check_output()"""
+    startupinfo = None
+    if sublime.platform() == "windows":
+        # Don't let console window pop-up on Windows.
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = subprocess.SW_HIDE
+
+    return subprocess.check_output(*args, universal_newlines=True, startupinfo=startupinfo, **kwargs)
+
 class DockerVolumeWatcherEventListener(sublime_plugin.EventListener):
 
     def on_post_save_async(self, view):
@@ -82,9 +95,4 @@ class DockerVolumeWatcherEventListener(sublime_plugin.EventListener):
                         cmd = 'docker exec "'+name+'" chmod 777 "'+filePath+'"'
                         print("cmd:", cmd)
                         if not DEBUG:
-                            view.window().run_command("exec", {
-                                'shell_cmd': cmd,
-                                'quiet': True,
-                            })
-                            # https://github.com/SublimeText/LaTeXTools/issues/566
-                            view.window().run_command("hide_panel", {"panel": "output.exec"})
+                            check_output(cmd)
