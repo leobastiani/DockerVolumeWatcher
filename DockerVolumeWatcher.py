@@ -4,6 +4,7 @@ import sys
 import sublime
 import sublime_plugin
 import glob
+import json
 import socket
 import subprocess
 
@@ -20,6 +21,32 @@ def getIsPortOpen(port):
     else:
         isPortOpen = False
     return isPortOpen
+
+openedContainers = None
+def getOpenedContainers():
+    global openedContainers
+    if openedContainers is not None:
+        return openedContainers
+    lines = check_output(r'docker ps -q --format "{{.Names}}"')
+    # remove os espaços em branco
+    lines = [x for x in re.split(r'[\n\r]+', lines) if x]
+    openedContainers = lines
+    return openedContainers
+
+volumes = None
+def getVolumes():
+    global volumes
+    if volumes is not None:
+        return volumes
+    openedContainers = getOpenedContainers()
+    if openedContainers:
+        volumes = []
+    for c in openedContainers:
+        res = json.loads(check_output(r'docker inspect --format "{{json .Mounts}}" '+c))
+        for d in res:
+            d['container'] = c
+        volumes += res
+    return volumes
 
 Settings = {}
 DEBUG = False
@@ -68,6 +95,8 @@ class DockerVolumeWatcherEventListener(sublime_plugin.EventListener):
         debug("isEnabled:", isEnabled)
         if not getSetting('enabled'):
             return ;
+        print("getVolumes():", getVolumes())
+        return ;
 
         port = getSetting('port', 80)
         debug("port:", port)
