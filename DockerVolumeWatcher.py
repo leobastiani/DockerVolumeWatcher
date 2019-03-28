@@ -1,26 +1,8 @@
-import os
 import re
-import sys
 import sublime
 import sublime_plugin
-import glob
 import json
-import socket
 import subprocess
-
-isPortOpen = None
-def getIsPortOpen(port):
-    global isPortOpen
-    if isPortOpen is not None:
-        return isPortOpen
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    result = sock.connect_ex(('127.0.0.1', port))
-    if result == 0:
-        sock.close()
-        isPortOpen = True
-    else:
-        isPortOpen = False
-    return isPortOpen
 
 openedContainers = None
 def getOpenedContainers():
@@ -58,11 +40,14 @@ def getSetting(name, default=None):
     if ret is not None:
         Settings[name] = ret
         return ret
-    res = sublime.load_resource("Packages/User/DockerVolumeWatcher.sublime-settings")
-    ret = sublime.decode_value(res).get(name, default)
-    if ret is not None:
-        Settings[name] = ret
-        return ret
+    try:
+        res = sublime.load_resource("Packages/User/DockerVolumeWatcher.sublime-settings")
+        ret = sublime.decode_value(res).get(name, default)
+        if ret is not None:
+            Settings[name] = ret
+            return ret
+    except IOError:
+        pass
     ret = sublime.load_settings("DockerVolumeWatcher.sublime-settings").get(name, default)
     Settings[name] = ret
     return ret
@@ -83,45 +68,53 @@ def check_output(*args, **kwargs):
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         startupinfo.wShowWindow = subprocess.SW_HIDE
 
-    return subprocess.check_output(*args, universal_newlines=True, startupinfo=startupinfo, **kwargs)
+    try:
+        debug("check_output_args:", args)
+        ret = subprocess.check_output(*args, universal_newlines=True, startupinfo=startupinfo, **kwargs)
+        debug("check_output_ret:", ret)
+        return ret
+    except Exception as e:
+        global Settings
+        Settings['enabled'] = False
+        raise e
+
 
 class DockerVolumeWatcherEventListener(sublime_plugin.EventListener):
 
     def on_post_save_async(self, view):
-        global DEBUG, isPortOpen
+        global DEBUG
         DEBUG = getSetting('debug', False)
         debug("DEBUG:", DEBUG)
         isEnabled = getSetting('enabled')
         debug("isEnabled:", isEnabled)
         if not getSetting('enabled'):
             return ;
-        print("getVolumes():", getVolumes())
-        return ;
 
-        port = getSetting('port', 80)
-        debug("port:", port)
-        isPortOpen = None
-        path_mappings = getSetting('path_mapping', {})
-        debug("path_mappings:", path_mappings)
-        if path_mappings:
+        volumes = getVolumes()
+        debug("volumes:", volumes)
+        if volumes:
+            # troca C:\ por C:/
             filePath = view.file_name().replace('\\', '/')
-            for p in path_mappings:
-                name = p['name']
-                destPath = p['dest']
-                srcPath = p['src'].replace('\\', '/')
-                debug("name:", name)
+            # troca C:/ por /c/
+            filePath = re.sub(
+                r'^([\w]):/',
+                lambda x: '/%s/' % x.group(1).lower(),
+                filePath
+            )
+            for v in volumes:
+                container = v['container']
+                destPath = v['Destination']
+                srcPath = v['Source']
+                debug("container:", container)
                 debug("destPath:", destPath)
                 debug("srcPath:", srcPath)
                 debug("filePath:", filePath)
                 mustTouch = re.search('^'+srcPath, filePath)
                 debug("mustTouch:", mustTouch)
                 if mustTouch:
-                    portOpen = getIsPortOpen(port)
-                    debug("portOpen:", portOpen)
-                    if portOpen:
-                        # faz a troca
-                        filePath = re.sub('^'+srcPath, destPath, filePath)
-                        cmd = 'docker exec "'+name+'" chmod 777 "'+filePath+'"'
-                        print("cmd:", cmd)
-                        if not DEBUG:
-                            check_output(cmd)
+                    # faz a troca
+                    filePath = re.sub('^'+srcPath, destPath, filePath)
+                    cmd = 'docker exec "'+container+'" chmod 777 "'+filePath+'"'
+                    print("cmd:", cmd)
+                    if not DEBUG:
+                        check_output(cmd)
